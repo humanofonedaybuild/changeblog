@@ -14,6 +14,7 @@ export const pollRepos = inngest.createFunction(
         .from('repos')
         .select('id, owner, name, full_name, github_app_installation_id, last_polled_at')
         .eq('webhook_active', false)
+        .eq('platform', 'github')
         .or(`last_polled_at.is.null,last_polled_at.lt.${cutoff}`)
         .limit(100)
       if (error) throw error
@@ -27,10 +28,11 @@ export const pollRepos = inngest.createFunction(
             ? await getInstallationOctokit(repo.github_app_installation_id)
             : new Octokit()
 
+          const releasesPerRepo = parseInt(process.env.RELEASES_PER_REPO ?? '3')
           const { data: releases } = await octokit.rest.repos.listReleases({
             owner: repo.owner,
             repo: repo.name,
-            per_page: 10,
+            per_page: releasesPerRepo,
           })
 
           for (const release of releases) {

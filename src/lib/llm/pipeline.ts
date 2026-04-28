@@ -2,6 +2,12 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic()
 
+// Model selection — defaults to Haiku for launch cost control; promote to Sonnet after eval harness validates quality
+const CLASSIFY_MODEL = process.env.LLM_CLASSIFY_MODEL ?? 'claude-haiku-4-5-20251001'
+const SEVERITY_MODEL = process.env.LLM_SEVERITY_MODEL ?? 'claude-haiku-4-5-20251001'
+const GROUNDING_MODEL = process.env.LLM_GROUNDING_MODEL ?? 'claude-sonnet-4-6'
+export const MODEL_VERSION = `classify:${CLASSIFY_MODEL},severity:${SEVERITY_MODEL},grounding:${GROUNDING_MODEL}`
+
 export type Category =
   | 'breaking'
   | 'security'
@@ -11,6 +17,7 @@ export type Category =
   | 'bugfix'
   | 'docs'
   | 'internal'
+  | 'model-weights'
 
 export interface ClassifyResult {
   categories: Category[]
@@ -55,20 +62,20 @@ export interface PipelineOutput {
   model_version: string
 }
 
-// Classify release notes using Sonnet — determines categories and breaking changes
+// Classify release notes — determines categories and breaking changes
 export async function classifyRelease(
   repoFullName: string,
   releaseBody: string
 ): Promise<ClassifyResult> {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: CLASSIFY_MODEL,
     max_tokens: 1024,
     system: [
       {
         type: 'text',
         text: `You are a release-notes analyst for open-source software. Classify release notes into categories and extract key changes.
 
-Categories: breaking|security|feature|perf|deprecation|bugfix|docs|internal
+Categories: breaking|security|feature|perf|deprecation|bugfix|docs|internal|model-weights
 
 Output valid JSON only: {"categories": string[], "breaking_changes": string[], "deprecated_apis": string[], "summary_hint": string}`,
         cache_control: { type: 'ephemeral' },
@@ -86,13 +93,13 @@ Output valid JSON only: {"categories": string[], "breaking_changes": string[], "
   return JSON.parse(extractJson(text)) as ClassifyResult
 }
 
-// Score severity 0-5 using Sonnet
+// Score severity 0-5
 export async function scoreSeverity(
   categories: Category[],
   breakingChanges: string[]
 ): Promise<SeverityResult> {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: SEVERITY_MODEL,
     max_tokens: 256,
     system: [
       {
@@ -149,13 +156,13 @@ Output valid JSON only:
   return JSON.parse(extractJson(text)) as SummarizeResult
 }
 
-// Grounding check using Sonnet — verifies all claims trace to source
+// Grounding check — verifies all claims trace to source
 export async function groundingCheck(
   releaseBody: string,
   summary: SummarizeResult
 ): Promise<GroundingResult> {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: GROUNDING_MODEL,
     max_tokens: 1024,
     system: [
       {
@@ -214,7 +221,7 @@ export async function processRelease(
   tagName: string,
   releaseBody: string
 ): Promise<PipelineOutput & { groundingResult?: GroundingResult; hallucinationResult?: HallucinationResult }> {
-  const modelVersion = 'sonnet-4-6/haiku-4-5'
+  const modelVersion = MODEL_VERSION
 
   const [classification, severityResult] = await Promise.all([
     classifyRelease(repoFullName, releaseBody),

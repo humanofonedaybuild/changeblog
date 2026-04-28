@@ -3,8 +3,9 @@ import { inngest } from '@/inngest/client'
 import { processReleaseFunction } from '@/inngest/functions/process-release'
 import { sendWeeklyDigest, sendBreakingAlert } from '@/inngest/functions/send-digest'
 import { pollRepos } from '@/inngest/functions/poll-repos'
+import { pollHfRepos } from '@/inngest/functions/poll-hf-repos'
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [processReleaseFunction, sendWeeklyDigest, sendBreakingAlert, pollRepos],
+  functions: [processReleaseFunction, sendWeeklyDigest, sendBreakingAlert, pollRepos, pollHfRepos],
 })

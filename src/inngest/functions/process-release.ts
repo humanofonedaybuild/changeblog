@@ -1,5 +1,5 @@
 import { inngest } from '../client'
-import { processRelease } from '@/lib/llm/pipeline'
+import { processRelease, MODEL_VERSION } from '@/lib/llm/pipeline'
 import { createServiceClient } from '@/lib/supabase/server'
 
 export const processReleaseFunction = inngest.createFunction(
@@ -26,12 +26,35 @@ export const processReleaseFunction = inngest.createFunction(
       return { skipped: true }
     }
 
+    // Daily rate limit gate — INGEST_DAILY_RATE_LIMIT=0 disables the limit
+    const dailyLimit = parseInt(process.env.INGEST_DAILY_RATE_LIMIT ?? '0')
+    if (dailyLimit > 0) {
+      const rateLimited = await step.run('check-daily-rate-limit', async () => {
+        const todayStart = new Date()
+        todayStart.setUTCHours(0, 0, 0, 0)
+        const { count } = await supabase
+          .from('releases')
+          .select('id', { count: 'exact', head: true })
+          .eq('processing_status', 'done')
+          .gte('processed_at', todayStart.toISOString())
+        return (count ?? 0) >= dailyLimit
+      })
+
+      if (rateLimited) {
+        await supabase
+          .from('releases')
+          .update({ processing_status: 'queued' })
+          .eq('id', releaseId)
+        return { rateLimited: true }
+      }
+    }
+
     await supabase
       .from('releases')
       .update({ processing_status: 'processing' })
       .eq('id', releaseId)
 
-    const contentHash = `${release.repo_id}:${release.tag_name}:sonnet-4-6/haiku-4-5`
+    const contentHash = `${release.repo_id}:${release.tag_name}:${MODEL_VERSION}`
 
     // Check cache
     const cached = await step.run('check-cache', async () => {
