@@ -30,7 +30,9 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/settings') ||
     request.nextUrl.pathname.startsWith('/maintainer')
 
-  if (isProtected && !user) {
+  const previewMode = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true'
+
+  if (isProtected && !user && !previewMode) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('next', request.nextUrl.pathname)
