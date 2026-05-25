@@ -23,6 +23,11 @@ export interface Database {
           last_polled_at: string | null
           created_at: string
           updated_at: string
+          platform: 'github' | 'hugging_face'
+          hf_author: string | null
+          hf_pipeline_tag: string | null
+          hf_likes: number | null
+          hf_downloads: number | null
         }
         Insert: {
           id?: string
@@ -36,6 +41,11 @@ export interface Database {
           last_polled_at?: string | null
           created_at?: string
           updated_at?: string
+          platform?: 'github' | 'hugging_face'
+          hf_author?: string | null
+          hf_pipeline_tag?: string | null
+          hf_likes?: number | null
+          hf_downloads?: number | null
         }
         Update: {
           id?: string
@@ -48,6 +58,11 @@ export interface Database {
           webhook_active?: boolean
           last_polled_at?: string | null
           updated_at?: string
+          platform?: 'github' | 'hugging_face'
+          hf_author?: string | null
+          hf_pipeline_tag?: string | null
+          hf_likes?: number | null
+          hf_downloads?: number | null
         }
         Relationships: []
       }
@@ -63,8 +78,10 @@ export interface Database {
           is_prerelease: boolean
           is_draft: boolean
           processed_at: string | null
-          processing_status: 'pending' | 'processing' | 'done' | 'failed' | 'skipped'
+          processing_status: 'pending' | 'processing' | 'done' | 'failed' | 'skipped' | 'queued'
           created_at: string
+          hf_commit_sha: string | null
+          source_platform: 'github' | 'hugging_face'
         }
         Insert: {
           id?: string
@@ -77,8 +94,10 @@ export interface Database {
           is_prerelease?: boolean
           is_draft?: boolean
           processed_at?: string | null
-          processing_status?: 'pending' | 'processing' | 'done' | 'failed' | 'skipped'
+          processing_status?: 'pending' | 'processing' | 'done' | 'failed' | 'skipped' | 'queued'
           created_at?: string
+          hf_commit_sha?: string | null
+          source_platform?: 'github' | 'hugging_face'
         }
         Update: {
           id?: string
@@ -91,7 +110,9 @@ export interface Database {
           is_prerelease?: boolean
           is_draft?: boolean
           processed_at?: string | null
-          processing_status?: 'pending' | 'processing' | 'done' | 'failed' | 'skipped'
+          processing_status?: 'pending' | 'processing' | 'done' | 'failed' | 'skipped' | 'queued'
+          hf_commit_sha?: string | null
+          source_platform?: 'github' | 'hugging_face'
         }
         Relationships: [
           {
